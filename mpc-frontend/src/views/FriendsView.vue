@@ -54,6 +54,18 @@
             <span class="friend-status">{{ friend.status === 'ONLINE' ? '在线' : '离线' }}</span>
           </div>
         </div>
+
+        <!-- 右键菜单 -->
+        <div v-if="contextMenu.visible" class="context-menu"
+          :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }"
+          @click.stop>
+          <div class="menu-item" @click="viewUserInfo(contextMenu.friend)">
+            <el-icon><InfoFilled /></el-icon> 查看信息
+          </div>
+          <div class="menu-item danger" @click="deleteFriend(contextMenu.friend)">
+            <el-icon><Delete /></el-icon> 删除好友
+          </div>
+        </div>
       </div>
     </div>
 
@@ -75,23 +87,27 @@
     <el-dialog v-model="showAddFriend" title="添加好友" width="360px">
       <el-form @submit.prevent="sendFriendRequest">
         <el-form-item label="用户ID">
-          <el-input v-model="targetUserId" placeholder="输入对方用户ID" type="number" />
+          <el-input v-model="targetUserId" placeholder="输入对方用户ID" />
         </el-form-item>
+
+        <!-- 用户预览 -->
+        <div v-if="previewLoading" class="user-preview loading">
+          <el-icon class="is-loading"><Loading /></el-icon>
+          <span>加载中...</span>
+        </div>
+        <div v-else-if="previewUser" class="user-preview">
+          <UserAvatar :src="previewUser.avatar" :name="previewUser.username" :size="40" />
+          <span class="preview-name">{{ previewUser.username }}</span>
+        </div>
       </el-form>
       <template #footer>
         <el-button @click="showAddFriend = false">取消</el-button>
-        <el-button type="primary" :loading="addLoading" @click="sendFriendRequest">发送申请</el-button>
+        <el-button v-if="previewUser" type="primary" :loading="addLoading" @click="sendFriendRequest">发送申请</el-button>
       </template>
     </el-dialog>
 
-    <!-- 右键菜单 -->
-    <div v-if="contextMenu.visible" class="context-menu"
-      :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }"
-      @click.stop>
-      <div class="menu-item danger" @click="deleteFriend(contextMenu.friend)">
-        <el-icon><Delete /></el-icon> 删除好友
-      </div>
-    </div>
+    <!-- 用户信息弹窗 -->
+    <UserInfoDialog v-model="showUserInfo" :user-id="selectedUserId" />
   </div>
 </template>
 
@@ -99,14 +115,15 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus, Bell, ChatDotRound, Delete } from '@element-plus/icons-vue'
+import { Plus, Bell, ChatDotRound, Delete, InfoFilled, Loading } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFriendStore } from '@/stores/friend'
 import { useChatStore } from '@/stores/chat'
 import { useWsStore } from '@/stores/ws'
-import { friendApi } from '@/api'
+import { friendApi, userApi } from '@/api'
 import UserAvatar from '@/components/UserAvatar.vue'
 import ChatWindow from '@/components/ChatWindow.vue'
+import UserInfoDialog from '@/components/UserInfoDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -124,6 +141,12 @@ const activeFriend = ref(null)
 const activeFriendId = computed(() => activeFriend.value?.id)
 
 const contextMenu = ref({ visible: false, x: 0, y: 0, friend: null })
+const showUserInfo = ref(false)
+const selectedUserId = ref(null)
+
+const previewUser = ref(null)
+const previewLoading = ref(false)
+let previewTimer = null
 
 const filteredFriends = computed(() =>
   friendStore.friends.filter(f =>
@@ -172,19 +195,51 @@ function sendMsg(content) {
 }
 
 async function sendFriendRequest() {
-  if (!targetUserId.value) return
+  if (!targetUserId.value || !previewUser.value) return
   addLoading.value = true
   try {
     await friendApi.sendRequest(Number(targetUserId.value))
     ElMessage.success('好友申请已发送')
     showAddFriend.value = false
     targetUserId.value = ''
+    previewUser.value = null
   } catch (e) {
     ElMessage.error(e || '发送失败')
   } finally {
     addLoading.value = false
   }
 }
+
+async function previewTargetUser() {
+  const uid = targetUserId.value.trim()
+  if (!uid || isNaN(uid)) {
+    previewUser.value = null
+    return
+  }
+
+  previewLoading.value = true
+  try {
+    previewUser.value = await userApi.getUser(Number(uid))
+  } catch {
+    previewUser.value = null
+  } finally {
+    previewLoading.value = false
+  }
+}
+
+watch(targetUserId, () => {
+  previewUser.value = null
+  if (previewTimer) clearTimeout(previewTimer)
+  previewTimer = setTimeout(previewTargetUser, 1000)
+})
+
+watch(showAddFriend, (val) => {
+  if (!val) {
+    targetUserId.value = ''
+    previewUser.value = null
+    if (previewTimer) clearTimeout(previewTimer)
+  }
+})
 
 async function handleRequest(requesterId, accept) {
   try {
@@ -210,7 +265,27 @@ async function deleteFriend(friend) {
 }
 
 function showFriendMenu(e, friend) {
-  contextMenu.value = { visible: true, x: e.clientX, y: e.clientY, friend }
+  const item = e.currentTarget
+  const rect = item.getBoundingClientRect()
+  const scrollContainer = item.closest('.list-scroll')
+  const containerRect = scrollContainer.getBoundingClientRect()
+
+  const relativeTop = rect.top - containerRect.top + scrollContainer.scrollTop
+  const avatarWidth = 38
+  const menuWidth = 140
+
+  contextMenu.value = {
+    visible: true,
+    x: avatarWidth + 50,
+    y: relativeTop,
+    friend
+  }
+}
+
+function viewUserInfo(friend) {
+  contextMenu.value.visible = false
+  selectedUserId.value = friend.id
+  showUserInfo.value = true
 }
 
 document.addEventListener('click', () => { contextMenu.value.visible = false })
@@ -291,6 +366,7 @@ document.addEventListener('click', () => { contextMenu.value.visible = false })
   flex: 1;
   overflow-y: auto;
   padding: 0 4px 8px;
+  position: relative;
 }
 
 .empty-tip {
@@ -363,14 +439,15 @@ document.addEventListener('click', () => { contextMenu.value.visible = false })
 }
 
 .context-menu {
-  position: fixed;
+  position: absolute;
   background-color: var(--bg-tertiary);
   border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 4px;
-  z-index: 9999;
+  z-index: 100;
   min-width: 140px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  pointer-events: auto;
 }
 
 .menu-item {
@@ -386,4 +463,26 @@ document.addEventListener('click', () => { contextMenu.value.visible = false })
 .menu-item:hover { background-color: var(--bg-hover); }
 .menu-item.danger { color: var(--danger); }
 .menu-item.danger:hover { background-color: rgba(237,66,69,0.15); }
+
+.user-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background-color: var(--bg-tertiary);
+  border-radius: 6px;
+  margin-top: 8px;
+}
+
+.user-preview.loading {
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.preview-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
 </style>

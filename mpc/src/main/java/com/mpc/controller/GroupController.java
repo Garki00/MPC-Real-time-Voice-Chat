@@ -108,4 +108,24 @@ public class GroupController {
         groupService.setAdmin(user.getId(), groupId, req.getUserId(), grant);
         return ResponseEntity.ok(grant ? "已设为管理员" : "已撤销管理员");
     }
+
+    @GetMapping("/{groupId}/announcements")
+    public ResponseEntity<List<GroupDto.AnnouncementInfo>> getAnnouncements(@PathVariable Long groupId) {
+        return ResponseEntity.ok(groupService.getAnnouncements(groupId));
+    }
+
+    @PostMapping("/{groupId}/announcements")
+    public ResponseEntity<GroupDto.AnnouncementInfo> createAnnouncement(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long groupId,
+            @Valid @RequestBody GroupDto.AnnouncementRequest req) {
+        var announcement = groupService.createAnnouncement(user.getId(), groupId, req);
+        GroupDto.AnnouncementInfo info = new GroupDto.AnnouncementInfo();
+        info.setId(announcement.getId());
+        info.setGroupId(announcement.getGroupId());
+        info.setAuthorId(announcement.getAuthorId());
+        info.setContent(announcement.getContent());
+        info.setCreatedAt(announcement.getCreatedAt().toString());
+        return ResponseEntity.ok(info);
+    }
 }

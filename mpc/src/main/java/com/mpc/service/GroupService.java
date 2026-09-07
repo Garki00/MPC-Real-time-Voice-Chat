@@ -21,6 +21,7 @@ public class GroupService {
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final GroupJoinRequestRepository joinRequestRepository;
+    private final GroupAnnouncementRepository announcementRepository;
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final OnlineStatusService onlineStatusService;
@@ -197,10 +198,11 @@ public class GroupService {
                     info.setId(req.getId());
                     info.setGroupId(req.getGroupId());
                     info.setUserId(req.getUserId());
+                    info.setStatus(req.getStatus().name());
                     info.setCreatedAt(req.getCreatedAt().toString());
                     userRepository.findById(req.getUserId()).ifPresent(u -> {
                         info.setUsername(u.getUsername());
-                        info.setAvatar(u.getAvatar());
+                        info.setUserAvatar(u.getAvatar());
                     });
                     return info;
                 })
@@ -216,6 +218,12 @@ public class GroupService {
         GroupMember m = groupMemberRepository.findByGroupIdAndUserId(groupId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("不在群组中"));
         if (m.getRole() == MemberRole.MEMBER) throw new IllegalArgumentException("权限不足");
+    }
+
+    private boolean isAdmin(Long userId, Long groupId) {
+        return groupMemberRepository.findByGroupIdAndUserId(groupId, userId)
+                .map(m -> m.getRole() == MemberRole.OWNER || m.getRole() == MemberRole.ADMIN)
+                .orElse(false);
     }
 
     @Transactional(readOnly = true)
@@ -234,6 +242,37 @@ public class GroupService {
         info.setMemberCount(groupMemberRepository.findByGroupId(group.getId()).size());
         info.setCreatedAt(group.getCreatedAt().toString());
         userRepository.findById(group.getOwnerId()).ifPresent(u -> info.setOwnerName(u.getUsername()));
+        return info;
+    }
+
+    @Transactional
+    public GroupAnnouncement createAnnouncement(Long userId, Long groupId, GroupDto.AnnouncementRequest req) {
+        if (!isAdmin(userId, groupId)) {
+            throw new IllegalArgumentException("权限不足");
+        }
+        GroupAnnouncement announcement = new GroupAnnouncement();
+        announcement.setGroupId(groupId);
+        announcement.setAuthorId(userId);
+        announcement.setContent(req.getContent());
+        return announcementRepository.save(announcement);
+    }
+
+    @Transactional(readOnly = true)
+    public List<GroupDto.AnnouncementInfo> getAnnouncements(Long groupId) {
+        return announcementRepository.findByGroupIdOrderByCreatedAtDesc(groupId).stream()
+                .map(this::toAnnouncementInfo)
+                .collect(Collectors.toList());
+    }
+
+    private GroupDto.AnnouncementInfo toAnnouncementInfo(GroupAnnouncement announcement) {
+        GroupDto.AnnouncementInfo info = new GroupDto.AnnouncementInfo();
+        info.setId(announcement.getId());
+        info.setGroupId(announcement.getGroupId());
+        info.setAuthorId(announcement.getAuthorId());
+        info.setContent(announcement.getContent());
+        info.setCreatedAt(announcement.getCreatedAt().toString());
+        userRepository.findById(announcement.getAuthorId())
+                .ifPresent(u -> info.setAuthorName(u.getUsername()));
         return info;
     }
 }

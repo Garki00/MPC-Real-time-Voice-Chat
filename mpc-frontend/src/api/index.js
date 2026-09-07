@@ -38,6 +38,8 @@ export const groupApi = {
   handleJoinRequest: (requestId, approve) => http.post(`/groups/requests/${requestId}/handle`, { approve }),
   kick: (groupId, userId) => http.post(`/groups/${groupId}/kick`, { userId }),
   setAdmin: (groupId, userId, grant) => http.post(`/groups/${groupId}/admin?grant=${grant}`, { userId }),
+  getAnnouncements: (groupId) => http.get(`/groups/${groupId}/announcements`),
+  createAnnouncement: (groupId, data) => http.post(`/groups/${groupId}/announcements`, data),
   uploadGroupAvatar: (blob) => {
     const form = new FormData()
     form.append('file', blob, 'avatar.jpg')

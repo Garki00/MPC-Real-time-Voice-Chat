@@ -60,7 +60,25 @@ public class GroupDto {
         private Long groupId;
         private Long userId;
         private String username;
-        private String avatar;
+        private String userAvatar;
+        private String status;
+        private String createdAt;
+    }
+
+    @Data
+    public static class AnnouncementRequest {
+        @NotBlank
+        @Size(max = 500)
+        private String content;
+    }
+
+    @Data
+    public static class AnnouncementInfo {
+        private Long id;
+        private Long groupId;
+        private Long authorId;
+        private String authorName;
+        private String content;
         private String createdAt;
     }
 }

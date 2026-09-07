@@ -41,7 +41,8 @@ async function onAvatarCropped(blob) {
   try {
     const res = await userApi.uploadAvatar(blob)
     avatarUrl.value = res.url
-    auth.user = { ...auth.user, avatar: res.url }
+    await userApi.updateMe({ avatar: res.url })
+    await auth.refreshUser()
     ElMessage.success('头像已更新')
   } catch { ElMessage.error('头像上传失败') }
 }

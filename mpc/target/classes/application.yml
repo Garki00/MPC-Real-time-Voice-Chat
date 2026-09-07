@@ -20,6 +20,7 @@ spring:
   data:
     redis:
 #      host: 127.0.0.1
+#改为redis服务器地址
       host: 172.19.129.19
       port: 6379
       database: 0

@@ -79,6 +79,8 @@ function handleNotif(notif) {
   const p = notif.payload || {}
   if (notif.type === 'FRIEND_REQUEST' || notif.type === 'FRIEND_ACCEPTED') {
     router.push('/friends')
+  } else if (notif.type === 'GROUP_JOIN_REQUEST' && p.groupId) {
+    router.push(`/groups/${p.groupId}?openRequests=true`)
   } else if (notif.type.startsWith('GROUP') && p.groupId) {
     router.push(`/groups/${p.groupId}`)
   }

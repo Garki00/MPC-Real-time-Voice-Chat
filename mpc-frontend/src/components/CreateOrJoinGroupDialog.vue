@@ -1,7 +1,7 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Loading } from '@element-plus/icons-vue'
 import { groupApi } from '@/api'
 import ImageCropDialog from './ImageCropDialog.vue'
 
@@ -19,6 +19,10 @@ const avatarUrl = ref('')
 const showCrop = ref(false)
 const cropSrc = ref('')
 const fileInputRef = ref(null)
+
+const previewGroup = ref(null)
+const previewLoading = ref(false)
+let previewTimer = null
 
 const MAX_SIZE = 10 * 1024 * 1024
 
@@ -70,7 +74,7 @@ async function createGroup() {
 }
 
 async function joinGroup() {
-  if (!joinGroupId.value) return ElMessage.warning('请输入群组ID')
+  if (!joinGroupId.value || !previewGroup.value) return
   joinLoading.value = true
   try {
     await groupApi.requestJoin(Number(joinGroupId.value))
@@ -78,12 +82,43 @@ async function joinGroup() {
     emit('joined')
     emit('update:modelValue', false)
     joinGroupId.value = ''
+    previewGroup.value = null
   } catch (e) {
     ElMessage.error(e || '申请失败')
   } finally {
     joinLoading.value = false
   }
 }
+
+async function previewTargetGroup() {
+  const gid = joinGroupId.value.trim()
+  if (!gid || isNaN(gid)) {
+    previewGroup.value = null
+    return
+  }
+
+  previewLoading.value = true
+  try {
+    previewGroup.value = await groupApi.getGroup(Number(gid))
+  } catch {
+    previewGroup.value = null
+  } finally {
+    previewLoading.value = false
+  }
+}
+
+watch(joinGroupId, () => {
+  previewGroup.value = null
+  if (previewTimer) clearTimeout(previewTimer)
+  previewTimer = setTimeout(previewTargetGroup, 1000)
+})
+
+watch(() => props.modelValue, (val) => {
+  if (!val) {
+    if (previewTimer) clearTimeout(previewTimer)
+    previewGroup.value = null
+  }
+})
 
 function resetCreate() {
   createName.value = ''
@@ -129,12 +164,14 @@ function onClose() {
 
           <el-form @submit.prevent="createGroup">
             <el-form-item label="群组名称">
-              <el-input
-                v-model="createName"
-                placeholder="输入群组名称"
-                maxlength="100"
-                show-word-limit
-              />
+              <div class="input-with-limit">
+                <el-input
+                  v-model="createName"
+                  placeholder="输入群组名称"
+                  :maxlength="100"
+                />
+                <span class="char-count">{{ createName.length }}/100</span>
+              </div>
             </el-form-item>
           </el-form>
         </div>
@@ -144,8 +181,21 @@ function onClose() {
         <div class="tab-content">
           <el-form @submit.prevent="joinGroup">
             <el-form-item label="群组ID">
-              <el-input v-model="joinGroupId" placeholder="输入群组ID" type="number" />
+              <el-input v-model="joinGroupId" placeholder="输入群组ID" />
             </el-form-item>
+
+            <!-- 群组预览 -->
+            <div v-if="previewLoading" class="group-preview loading">
+              <el-icon class="is-loading"><Loading /></el-icon>
+              <span>加载中...</span>
+            </div>
+            <div v-else-if="previewGroup" class="group-preview">
+              <div class="group-avatar">
+                <img v-if="previewGroup.avatar" :src="previewGroup.avatar" />
+                <div v-else class="group-fallback">{{ previewGroup.name.charAt(0).toUpperCase() }}</div>
+              </div>
+              <span class="preview-name">{{ previewGroup.name }}</span>
+            </div>
           </el-form>
         </div>
       </el-tab-pane>
@@ -160,7 +210,7 @@ function onClose() {
         @click="createGroup"
       >创建</el-button>
       <el-button
-        v-else
+        v-else-if="previewGroup"
         type="primary"
         :loading="joinLoading"
         @click="joinGroup"
@@ -219,5 +269,73 @@ function onClose() {
 .avatar-hint {
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.group-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background-color: var(--bg-tertiary);
+  border-radius: 6px;
+  margin-top: 8px;
+}
+
+.group-preview.loading {
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.group-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  overflow: hidden;
+  background-color: var(--accent);
+  flex-shrink: 0;
+}
+
+.group-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.group-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.preview-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.input-with-limit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.input-with-limit .el-input { flex: 1; }
+
+.char-count {
+  font-size: 11px;
+  color: var(--text-secondary);
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 1px 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 </style>
