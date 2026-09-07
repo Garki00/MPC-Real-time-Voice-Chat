@@ -1,0 +1,5 @@
+com\mpc\model\Group.class
+com\mpc\model\GroupMember$MemberRole.class
+com\mpc\model\GroupMember.class
+com\mpc\model\VoiceChannel.class
+com\mpc\repository\GroupMemberRepository.class
