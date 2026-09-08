@@ -30,6 +30,12 @@
             <span class="group-name">{{ group.name }}</span>
             <span class="group-meta">{{ group.memberCount }} 成员</span>
           </div>
+          <el-badge
+            v-if="getUnreadCount(group.id)"
+            :value="getUnreadCount(group.id)"
+            class="unread-badge"
+            :max="99"
+          />
           <el-icon v-if="group.ownerId === auth.user?.id" class="owner-badge" title="群主">
             <Star />
           </el-icon>
@@ -156,8 +162,14 @@ const filteredGroups = computed(() =>
   groupStore.groups.filter(g => g.name.toLowerCase().includes(searchText.value.toLowerCase()))
 )
 
+function getUnreadCount(groupId) {
+  const key = `group_${groupId}`
+  return chatStore.unreadCounts[key] || 0
+}
+
 onMounted(async () => {
   await groupStore.fetchGroups()
+  await chatStore.loadUnreadCounts()
   const id = Number(route.params.groupId)
   if (id) {
     const g = groupStore.groups.find(g => g.id === id)
@@ -288,12 +300,22 @@ async function joinGroup() {
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.1s;
+  position: relative;
 }
 
 .group-item:hover { background-color: var(--bg-hover); }
 .group-item.active { background-color: var(--bg-hover); }
 
-.group-icon {
+.unread-badge {
+  margin-left: auto;
+}
+
+.unread-badge :deep(.el-badge__content) {
+  background-color: var(--accent);
+  border: none;
+}
+
+.owner-badge { color: var(--warning); font-size: 14px; margin-left: 4px; }
   width: 38px;
   height: 38px;
   border-radius: 10px;

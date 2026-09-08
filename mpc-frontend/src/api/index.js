@@ -52,6 +52,18 @@ export const chatApi = {
   getGroupHistory: (groupId) => http.get(`/chat/group/${groupId}`)
 }
 
+export const messageApi = {
+  markAsRead: (conversationType, conversationId, messageId) =>
+    http.post('/messages/read', null, {
+      params: { conversationType, conversationId, messageId }
+    }),
+  getUnreadCounts: () => http.get('/messages/unread-counts'),
+  getUnreadCount: (conversationType, conversationId) =>
+    http.get('/messages/unread-count', {
+      params: { conversationType, conversationId }
+    })
+}
+
 export const voiceApi = {
   getChannels: (groupId) => http.get(`/groups/${groupId}/channels`),
   createChannel: (groupId, data) => http.post(`/groups/${groupId}/channels`, data),

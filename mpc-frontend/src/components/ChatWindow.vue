@@ -51,8 +51,9 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useChatStore } from '@/stores/chat'
 import UserAvatar from './UserAvatar.vue'
 
 const props = defineProps({
@@ -63,14 +64,30 @@ const props = defineProps({
 
 const emit = defineEmits(['send'])
 const auth = useAuthStore()
+const chat = useChatStore()
 const inputText = ref('')
 const listRef = ref(null)
 
 watch(() => props.messages.length, () => {
   nextTick(() => {
     if (listRef.value) listRef.value.scrollTop = listRef.value.scrollHeight
+    markCurrentAsRead()
   })
 }, { immediate: true })
+
+function markCurrentAsRead() {
+  if (props.messages.length === 0) return
+  const conversationId = props.type === 'private' ? props.target.id : props.target.id
+  chat.markAsRead(props.type, conversationId)
+}
+
+onMounted(() => {
+  markCurrentAsRead()
+})
+
+onUnmounted(() => {
+  markCurrentAsRead()
+})
 
 function send() {
   const text = inputText.value.trim()

@@ -9,10 +9,12 @@
         </div>
 
         <!-- 好友 -->
-        <div class="nav-item" :class="{ active: route.path.startsWith('/friends') }"
-          @click="router.push('/friends')" title="好友">
-          <el-icon :size="22"><User /></el-icon>
-        </div>
+        <el-badge :value="chatStore.privateTotalUnreadCount || ''" :hidden="!chatStore.privateTotalUnreadCount" :max="99">
+          <div class="nav-item" :class="{ active: route.path.startsWith('/friends') }"
+            @click="router.push('/friends')" title="好友">
+            <el-icon :size="22"><User /></el-icon>
+          </div>
+        </el-badge>
 
         <!-- 通知 -->
         <el-badge :value="notifStore.unreadCount || ''" :hidden="!notifStore.unreadCount">
@@ -24,22 +26,31 @@
       </div>
 
       <!-- 群组头像列表 -->
-      
+
      <!-- 新增包装器 -->
       <div class="group-list-wrapper">
         <div class="group-list" @wheel.stop>
           <div
             v-for="group in visibleGroups"
             :key="group.id"
-            class="group-avatar-item"
-            :class="{ active: route.params.groupId == group.id }"
+            class="group-avatar-wrapper"
             :title="group.name"
             @click="router.push(`/groups/${group.id}`)"
           >
-            <div v-if="group.avatar" class="group-avatar-img">
-              <img :src="group.avatar" :alt="group.name" />
+            <div
+              class="group-avatar-item"
+              :class="{ active: route.params.groupId == group.id }"
+            >
+              <div v-if="group.avatar" class="group-avatar-img">
+                <img :src="group.avatar" :alt="group.name" />
+              </div>
+              <div v-else class="group-avatar-fallback">{{ group.name.charAt(0).toUpperCase() }}</div>
+
+              <!-- 未读徽章 -->
+              <div v-if="getGroupUnreadCount(group.id)" class="group-unread-badge">
+                {{ getGroupUnreadCount(group.id) > 99 ? '99+' : getGroupUnreadCount(group.id) }}
+              </div>
             </div>
-            <div v-else class="group-avatar-fallback">{{ group.name.charAt(0).toUpperCase() }}</div>
           </div>
         </div>
       </div>
@@ -78,6 +89,7 @@ import { useVoiceStore } from '@/stores/voice'
 import { useWsStore } from '@/stores/ws'
 import { useFriendStore } from '@/stores/friend'
 import { useGroupStore } from '@/stores/group'
+import { useChatStore } from '@/stores/chat'
 import UserAvatar from '@/components/UserAvatar.vue'
 import VoiceBar from '@/components/VoiceBar.vue'
 import ProfileDialog from '@/components/ProfileDialog.vue'
@@ -91,12 +103,18 @@ const voice = useVoiceStore()
 const ws = useWsStore()
 const friendStore = useFriendStore()
 const groupStore = useGroupStore()
+const chatStore = useChatStore()
 
 const showSettings = ref(false)
 const showCreateJoin = ref(false)
 
 const MAX_GROUPS = 8
 const visibleGroups = computed(() => groupStore.groups.slice(0, MAX_GROUPS))
+
+function getGroupUnreadCount(groupId) {
+  const key = `group_${groupId}`
+  return chatStore.unreadCounts[key] || 0
+}
 
 function onGroupCreated(group) {
   groupStore.addGroup(group)
@@ -112,7 +130,8 @@ onMounted(async () => {
   await Promise.all([
     auth.refreshUser(),
     friendStore.fetchFriends(),
-    groupStore.fetchGroups()
+    groupStore.fetchGroups(),
+    chatStore.loadUnreadCounts()
   ])
 })
 
@@ -192,17 +211,46 @@ onUnmounted(() => {
   display: none;
 }
 
+.group-avatar-wrapper {
+  position: relative;
+  cursor: pointer;
+}
+
 .group-avatar-item {
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  cursor: pointer;
   overflow: hidden;
   flex-shrink: 0;
   transition: border-radius 0.15s;
+  position: relative;
+}
+
+.group-unread-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background-color: var(--accent);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 5px;
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  z-index: 1;
 }
 
 .group-avatar-item:hover {
+  border-radius: 16px;
+}
+
+.group-avatar-wrapper:hover .group-avatar-item {
   border-radius: 16px;
 }
 

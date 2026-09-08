@@ -30,8 +30,15 @@ public class ChatService {
         messageRepository.save(msg);
 
         ChatDto.MessagePayload payload = toPayload(msg);
+
+        // 发送给接收者
         messagingTemplate.convertAndSendToUser(
                 String.valueOf(req.getReceiverId()), "/queue/messages", payload);
+
+        // 也发送给发送者自己（回显）
+        messagingTemplate.convertAndSendToUser(
+                String.valueOf(senderId), "/queue/messages", payload);
+
         return payload;
     }
 

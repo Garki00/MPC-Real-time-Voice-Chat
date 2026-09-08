@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS `groups` (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     owner_id BIGINT NOT NULL,
+    avatar VARCHAR(255),
     announcement TEXT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (owner_id) REFERENCES users(id)

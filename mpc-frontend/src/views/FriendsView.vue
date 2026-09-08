@@ -53,6 +53,12 @@
             <span class="friend-name">{{ friend.username }}</span>
             <span class="friend-status">{{ friend.status === 'ONLINE' ? '在线' : '离线' }}</span>
           </div>
+          <el-badge
+            v-if="getUnreadCount(friend.id)"
+            :value="getUnreadCount(friend.id)"
+            class="unread-badge"
+            :max="99"
+          />
         </div>
 
         <!-- 右键菜单 -->
@@ -154,9 +160,15 @@ const filteredFriends = computed(() =>
   )
 )
 
+function getUnreadCount(friendId) {
+  const key = `private_${friendId}`
+  return chatStore.unreadCounts[key] || 0
+}
+
 onMounted(async () => {
   await friendStore.fetchFriends()
   await friendStore.fetchRequests()
+  await chatStore.loadUnreadCounts()
   const id = Number(route.params.friendId)
   if (id) {
     const f = friendStore.friends.find(f => f.id === id)
@@ -181,8 +193,11 @@ async function openChat(friend) {
 
 function sendMsg(content) {
   if (!activeFriend.value) return
-  chatStore.pushPrivate({
-    id: Date.now(),
+
+  // 乐观更新：立即显示消息
+  const tempId = `temp-${Date.now()}`
+  const optimisticMsg = {
+    id: tempId,
     senderId: auth.user.id,
     receiverId: activeFriend.value.id,
     content,
@@ -190,7 +205,9 @@ function sendMsg(content) {
     createdAt: new Date().toISOString(),
     senderName: auth.user?.username,
     senderAvatar: auth.user?.avatar
-  })
+  }
+
+  chatStore.pushPrivate(optimisticMsg)
   ws.sendPrivate(activeFriend.value.id, content)
 }
 
@@ -384,10 +401,20 @@ document.addEventListener('click', () => { contextMenu.value.visible = false })
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.1s;
+  position: relative;
 }
 
 .friend-item:hover { background-color: var(--bg-hover); }
 .friend-item.active { background-color: var(--bg-hover); }
+
+.unread-badge {
+  margin-left: auto;
+}
+
+.unread-badge :deep(.el-badge__content) {
+  background-color: var(--accent);
+  border: none;
+}
 
 .avatar-wrap { position: relative; flex-shrink: 0; }
 
