@@ -3,7 +3,7 @@
     <div class="voice-panel-header">
       <span class="section-title">语音频道</span>
       <el-tooltip v-if="canManage" content="创建频道">
-        <el-button circle :icon="Plus" size="small" @click="showCreate = true" />
+        <el-button class="add-channel-btn" circle :icon="Plus" size="small" @click="showCreate = true" />
       </el-tooltip>
     </div>
 
@@ -15,13 +15,10 @@
         class="channel-item"
         :class="{ active: voiceStore.currentChannelId === ch.id }"
       >
-        <div class="channel-row" @click="toggleChannel(ch)">
+        <div class="channel-row" @click="toggleChannel(ch)" @contextmenu.prevent="showChannelMenu($event, ch)">
           <el-icon class="ch-icon"><Headset /></el-icon>
           <span class="ch-name">{{ ch.name }}</span>
           <span class="ch-count">{{ ch.participants?.length || 0 }}/{{ ch.maxCapacity }}</span>
-          <el-tooltip v-if="canManage" content="删除频道">
-            <el-icon class="ch-delete" @click.stop="deleteChannel(ch)"><Delete /></el-icon>
-          </el-tooltip>
         </div>
 
         <!-- 频道内成员 -->
@@ -35,14 +32,30 @@
       </div>
     </div>
 
+    <!-- 频道右键菜单 -->
+    <div v-if="channelMenu.visible && channelMenu.channel" class="context-menu"
+      :style="{ top: channelMenu.y + 'px', left: channelMenu.x + 'px' }"
+      @click.stop>
+      <div class="menu-item danger" @click="onDeleteChannelClick(channelMenu.channel)">
+        <el-icon><Delete /></el-icon> 删除频道
+      </div>
+    </div>
+
     <!-- 创建频道弹窗 -->
-    <el-dialog v-model="showCreate" title="创建语音频道" width="320px">
+    <el-dialog v-model="showCreate" title="创建语音频道" width="360px">
       <el-form :model="createForm" @submit.prevent="createChannel">
         <el-form-item label="频道名称">
           <el-input v-model="createForm.name" placeholder="输入频道名称" maxlength="50" />
         </el-form-item>
         <el-form-item label="最大人数">
-          <el-input-number v-model="createForm.maxCapacity" :min="2" :max="10" />
+          <div class="capacity-slider">
+            <div class="capacity-bounds">
+              <span>2人</span>
+              <span>50人</span>
+            </div>
+            <el-slider v-model="createForm.maxCapacity" :min="2" :max="50" :show-tooltip="false" />
+            <div class="capacity-value">{{ createForm.maxCapacity }} 人</div>
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -72,10 +85,13 @@ const ws = useWsStore()
 
 const showCreate = ref(false)
 const createLoading = ref(false)
-const createForm = ref({ name: '', maxCapacity: 10 })
+const createForm = ref({ name: '', maxCapacity: 25 })
+const channelMenu = ref({ visible: false, x: 0, y: 0, channel: null })
 
 onMounted(() => voiceStore.fetchChannels(props.groupId))
 watch(() => props.groupId, (id) => voiceStore.fetchChannels(id))
+
+document.addEventListener('click', () => { channelMenu.value.visible = false })
 
 async function toggleChannel(ch) {
   if (voiceStore.currentChannelId === ch.id) {
@@ -96,13 +112,34 @@ async function createChannel() {
     await voiceApi.createChannel(props.groupId, createForm.value)
     await voiceStore.fetchChannels(props.groupId)
     showCreate.value = false
-    createForm.value = { name: '', maxCapacity: 10 }
+    createForm.value = { name: '', maxCapacity: 25 }
     ElMessage.success('频道创建成功')
   } catch (e) {
     ElMessage.error(e || '创建失败')
   } finally {
     createLoading.value = false
   }
+}
+
+const CHANNEL_MENU_WIDTH = 140
+
+function showChannelMenu(e, ch) {
+  if (!props.canManage) return
+  const row = e.currentTarget
+  const rowRect = row.getBoundingClientRect()
+  const panel = row.closest('.voice-panel')
+  const panelRect = panel.getBoundingClientRect()
+  channelMenu.value = {
+    visible: true,
+    x: panelRect.right - CHANNEL_MENU_WIDTH - 8,
+    y: rowRect.bottom + 4,
+    channel: ch
+  }
+}
+
+function onDeleteChannelClick(ch) {
+  channelMenu.value.visible = false
+  deleteChannel(ch)
 }
 
 async function deleteChannel(ch) {
@@ -134,12 +171,23 @@ async function deleteChannel(ch) {
 }
 
 .section-title {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   text-transform: uppercase;
   color: var(--text-muted);
   letter-spacing: 0.5px;
   flex: 1;
+}
+
+.add-channel-btn {
+  --el-button-bg-color: var(--bg-tertiary);
+  --el-button-border-color: var(--border-color);
+  --el-button-text-color: var(--text-secondary);
+  --el-button-hover-bg-color: var(--accent);
+  --el-button-hover-border-color: var(--accent);
+  --el-button-hover-text-color: #fff;
+  width: 22px;
+  height: 22px;
 }
 
 .channel-list {
@@ -161,31 +209,21 @@ async function deleteChannel(ch) {
 .channel-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 8px;
+  gap: 8px;
+  padding: 7px 8px;
   border-radius: 4px;
   cursor: pointer;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 15px;
   transition: background-color 0.1s;
 }
 
 .channel-row:hover { background-color: var(--bg-hover); color: var(--text-primary); }
 .channel-item.active .channel-row { background-color: var(--bg-hover); color: var(--success); }
 
-.ch-icon { font-size: 14px; flex-shrink: 0; }
+.ch-icon { font-size: 18px; flex-shrink: 0; }
 .ch-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ch-count { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
-
-.ch-delete {
-  font-size: 13px;
-  color: var(--text-muted);
-  opacity: 0;
-  transition: opacity 0.1s;
-}
-
-.channel-row:hover .ch-delete { opacity: 1; }
-.ch-delete:hover { color: var(--danger); }
+.ch-count { font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
 
 .participant-list {
   padding: 2px 8px 4px 28px;
@@ -207,5 +245,51 @@ async function deleteChannel(ch) {
 .muted-icon {
   font-size: 12px;
   color: var(--warning);
+}
+
+.context-menu {
+  position: fixed;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 4px;
+  z-index: 2000;
+  min-width: 140px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.menu-item:hover { background-color: var(--bg-hover); }
+.menu-item.danger { color: var(--danger); }
+.menu-item.danger:hover { background-color: rgba(237,66,69,0.15); }
+
+.capacity-slider {
+  width: 100%;
+  padding: 4px 4px 0;
+}
+
+.capacity-bounds {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.capacity-value {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 6px;
 }
 </style>

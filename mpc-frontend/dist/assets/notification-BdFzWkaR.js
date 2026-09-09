@@ -1,0 +1,1 @@
+import{a2 as r,d as n}from"./index-BX_tAwwF.js";const c=r("notification",()=>{const a=n([]),e=n(0);function o(t){a.value.unshift({...t,id:Date.now(),read:!1}),e.value++}function u(){a.value.forEach(t=>t.read=!0),e.value=0}function i(){a.value=[],e.value=0}return{notifications:a,unreadCount:e,push:o,markAllRead:u,clear:i}});export{c as u};

@@ -36,7 +36,7 @@ public class VoiceChannelService {
     @Transactional
     public VoiceChannelDto.ChannelInfo createChannel(Long userId, Long groupId, VoiceChannelDto.CreateRequest req) {
         assertOwnerOrAdmin(userId, groupId);
-        if (req.getMaxCapacity() > 10) throw new IllegalArgumentException("语音分组上限最多10人");
+        if (req.getMaxCapacity() > 50) throw new IllegalArgumentException("语音频道上限最多50人");
         VoiceChannel vc = new VoiceChannel();
         vc.setGroup(groupRepository.getReferenceById(groupId));
         vc.setName(req.getName());
@@ -70,7 +70,7 @@ public class VoiceChannelService {
         assertOwnerOrAdmin(userId, vc.getGroup().getId());
         if (req.getName() != null) vc.setName(req.getName());
         if (req.getMaxCapacity() != null) {
-            if (req.getMaxCapacity() > 10) throw new IllegalArgumentException("语音分组上限最多10人");
+            if (req.getMaxCapacity() > 50) throw new IllegalArgumentException("语音频道上限最多50人");
             vc.setMaxCapacity(req.getMaxCapacity());
         }
         return toInfo(voiceChannelRepository.save(vc));

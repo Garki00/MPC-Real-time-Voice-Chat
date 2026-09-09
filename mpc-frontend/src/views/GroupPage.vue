@@ -143,7 +143,7 @@ watch(groupId, (id) => {
       </div>
 
       <div class="voice-panel-wrap">
-        <VoiceChannelPanel :group-id="groupId" />
+        <VoiceChannelPanel :group-id="groupId" :can-manage="isAdmin" />
       </div>
     </aside>
 

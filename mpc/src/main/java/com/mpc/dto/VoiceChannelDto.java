@@ -11,8 +11,8 @@ public class VoiceChannelDto {
         @Size(max = 100)
         private String name;
 
-        @Min(1) @Max(10)
-        private Integer maxCapacity = 10;
+        @Min(2) @Max(50)
+        private Integer maxCapacity = 25;
     }
 
     @Data
@@ -20,7 +20,7 @@ public class VoiceChannelDto {
         @Size(max = 100)
         private String name;
 
-        @Min(1) @Max(10)
+        @Min(2) @Max(50)
         private Integer maxCapacity;
     }
 

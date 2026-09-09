@@ -202,7 +202,8 @@ public class GroupService {
                     info.setCreatedAt(req.getCreatedAt().toString());
                     userRepository.findById(req.getUserId()).ifPresent(u -> {
                         info.setUsername(u.getUsername());
-                        info.setUserAvatar(u.getAvatar());
+                        info
+                                .setUserAvatar(u.getAvatar());
                     });
                     return info;
                 })

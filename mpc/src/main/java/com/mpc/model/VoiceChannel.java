@@ -23,7 +23,7 @@ public class VoiceChannel {
     private String name;
 
     @Column(name = "max_capacity", nullable = false)
-    private Integer maxCapacity = 10;
+    private Integer maxCapacity = 25;
 
     @Column(name = "created_by", nullable = false)
     private Long createdBy;

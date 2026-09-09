@@ -2,4 +2,4 @@ doc/
 mpc-frontend/node_modules/
 mpc/uploads/
 .claude/
-migration-update-schema/
+migration-update-schema.sql/
