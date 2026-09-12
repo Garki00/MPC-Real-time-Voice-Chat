@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mpc-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: mpc
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+
+  backend:
+    build: ./mpc
+    container_name: mpc-backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+      - redis
+    volumes:
+      - ./data/uploads:/app/uploads
+
+  frontend:
+    build: ./mpc-frontend          # 改成 build，指向 Vue 项目目录
+    container_name: mpc-frontend
+    ports:
+      - "5173:5173"               #
+    depends_on:
+      - backend
+    # 如果要边改代码边热更新，加下面这段卷挂载
+    volumes:
+      - ./mpc-frontend:/app
+      - /app/node_modules         # 防止主机 node_modules 覆盖容器内的
+
+  redis:
+    image: redis:7-alpine
+    container_name: mpc-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - ./data/redis:/data

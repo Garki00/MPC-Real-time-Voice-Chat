@@ -1,5 +1,8 @@
 doc/
 mpc-frontend/node_modules/
+mpc-frontend/dist/
+mpc/target/
 mpc/uploads/
 .claude/
 migration-update-schema.sql/
+data/

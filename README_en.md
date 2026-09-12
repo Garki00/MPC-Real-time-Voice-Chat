@@ -60,14 +60,61 @@ mpc/
 
 ## Getting Started
 
-### Prerequisites
+### Option 1: Using Docker (Recommended)
+
+#### Prerequisites
+
+- Docker 20.10+
+- Docker Compose 2.0+
+
+#### Start All Services
+
+1. Clone the project and navigate to directory:
+```bash
+git clone <repository-url>
+cd voice
+```
+
+2. Start with Docker Compose:
+```bash
+docker-compose up -d
+```
+
+This will automatically start the following services:
+- **MySQL** - Running on `localhost:3306`
+- **Redis** - Running on `localhost:6379`
+- **Backend Service** - Running on `localhost:8080`
+- **Frontend Service** - Running on `localhost:80`
+
+3. Access the application:
+Open your browser and visit `http://localhost`
+
+#### File Storage
+
+Uploaded files (such as user avatars) are stored in the `./data/uploads` directory on the host machine, mapped to `/app/uploads` in the backend container. Files persist on the host even if containers are restarted or removed.
+
+#### Stop Services
+
+```bash
+docker-compose down
+```
+
+To also remove data volumes:
+```bash
+docker-compose down -v
+```
+
+### Option 2: Local Development Environment
+
+#### Prerequisites
 
 - Java 17+
 - MySQL 8.0
 - Redis 6.0+
 - Maven 3.6+
+- Node.js 16+
 
-### Database Setup
+#### Database Setup
 
 1. Create database:
 ```sql
@@ -76,7 +123,7 @@ CREATE DATABASE mpc DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 2. (Optional) Run `src/main/resources/schema.sql` to create tables manually, or let JPA handle it via `ddl-auto: update`
 
-3. Update `src/main/resources/application.yml`:
+3. Update `mpc/src/main/resources/application.yml`:
 ```yaml
 spring:
   datasource:
@@ -89,14 +136,24 @@ spring:
       port: 6379
 ```
 
-### Run the Application
+#### Run Backend
 
 ```bash
 cd mpc
 mvn spring-boot:run
 ```
 
-Server runs at `http://localhost:8080`
+Backend server runs at `http://localhost:8080`
+
+#### Run Frontend
+
+```bash
+cd mpc-frontend
+npm install
+npm run dev
+```
+
+Frontend server runs at `http://localhost:5173`
 
 ## API Documentation
 

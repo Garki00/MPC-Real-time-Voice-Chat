@@ -60,14 +60,61 @@ mpc/
 
 ## 快速开始
 
-### 环境要求
+### 方式一：使用 Docker（推荐）
+
+#### 环境要求
+
+- Docker 20.10+
+- Docker Compose 2.0+
+
+#### 启动所有服务
+
+1. 克隆项目并进入目录：
+```bash
+git clone <repository-url>
+cd voice
+```
+
+2. 使用 Docker Compose 一键启动：
+```bash
+docker-compose up -d
+```
+
+这将自动启动以下服务：
+- **MySQL** - 运行于 `localhost:3306`
+- **Redis** - 运行于 `localhost:6379`
+- **后端服务** - 运行于 `localhost:8080`
+- **前端服务** - 运行于 `localhost:80`
+
+3. 访问应用：
+打开浏览器访问 `http://localhost`
+
+#### 文件存储
+
+上传的文件（如用户头像）存储在宿主机的 `./data/uploads` 目录，并映射到后端容器的 `/app/uploads` 目录。即使容器重启或删除，文件也会持久保存在宿主机上。
+
+#### 停止服务
+
+```bash
+docker-compose down
+```
+
+若需同时删除数据卷：
+```bash
+docker-compose down -v
+```
+
+### 方式二：本地开发环境
+
+#### 环境要求
 
 - Java 17+
 - MySQL 8.0
 - Redis 6.0+
 - Maven 3.6+
+- Node.js 16+
 
-### 数据库配置
+#### 数据库配置
 
 1. 创建数据库：
 ```sql
@@ -76,7 +123,7 @@ CREATE DATABASE mpc DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 2. （可选）手动执行 `src/main/resources/schema.sql` 创建数据表，或通过 `ddl-auto: update` 交由 JPA 自动建表
 
-3. 修改 `src/main/resources/application.yml`：
+3. 修改 `mpc/src/main/resources/application.yml`：
 ```yaml
 spring:
   datasource:
@@ -89,14 +136,24 @@ spring:
       port: 6379
 ```
 
-### 运行应用
+#### 运行后端
 
 ```bash
 cd mpc
 mvn spring-boot:run
 ```
 
-服务运行于 `http://localhost:8080`
+后端服务运行于 `http://localhost:8080`
+
+#### 运行前端
+
+```bash
+cd mpc-frontend
+npm install
+npm run dev
+```
+
+前端服务运行于 `http://localhost:5173`
 
 ## API 文档
 
