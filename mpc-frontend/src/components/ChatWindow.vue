@@ -5,7 +5,7 @@
       <div v-if="!messages.length" class="empty-tip">暂无消息</div>
       <div
         v-for="(msg, i) in messages"
-        :key="i"
+        :key="msg.id ?? `${msg.senderId}-${msg.createdAt}-${i}`"
         class="message-item"
         :class="{ self: msg.senderId === auth.user?.id }"
       >

@@ -16,6 +16,8 @@ services:
   backend:
     build: ./mpc
     container_name: mpc-backend
+    environment:
+      - TZ=Asia/Shanghai
     ports:
       - "8080:8080"
     depends_on:

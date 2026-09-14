@@ -9,6 +9,8 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -19,6 +21,9 @@ public class ChatService {
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
+
+    private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+            .withZone(ZoneId.of("UTC"));
 
     @Transactional
     public ChatDto.MessagePayload sendPrivate(Long senderId, ChatDto.PrivateMessage req) {
@@ -78,7 +83,10 @@ public class ChatService {
         p.setGroupId(msg.getGroupId());
         p.setContent(msg.getContent());
         p.setType(msg.getType());
-        p.setCreatedAt(msg.getCreatedAt().toString());
+        // 将LocalDateTime转换为UTC ISO 8601格式
+        p.setCreatedAt(msg.getCreatedAt().atZone(ZoneId.systemDefault())
+                .withZoneSameInstant(ZoneId.of("UTC"))
+                .format(ISO_FORMATTER));
         userRepository.findById(msg.getSenderId()).ifPresent(u -> {
             p.setSenderName(u.getUsername());
             p.setSenderAvatar(u.getAvatar());

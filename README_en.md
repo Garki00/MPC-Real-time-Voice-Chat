@@ -93,6 +93,16 @@ Open your browser and visit `http://localhost`
 
 Uploaded files (such as user avatars) are stored in the `./data/uploads` directory on the host machine, mapped to `/app/uploads` in the backend container. Files persist on the host even if containers are restarted or removed.
 
+#### Timezone Configuration
+
+The backend container uses `Asia/Shanghai` timezone by default to ensure message timestamps align with China timezone. To change the timezone, modify `docker-compose.yml`:
+
+```yaml
+backend:
+  environment:
+    - TZ=Asia/Shanghai  # Change to your timezone, e.g., UTC, America/New_York, etc.
+```
+
 #### Stop Services
 
 ```bash

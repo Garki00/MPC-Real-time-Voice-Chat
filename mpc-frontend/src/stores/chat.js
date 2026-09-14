@@ -39,29 +39,37 @@ export const useChatStore = defineStore('chat', () => {
     const key = msg.senderId === auth.user?.id ? msg.receiverId : msg.senderId
     if (!privateMessages.value[key]) privateMessages.value[key] = []
 
-    // 检查是否是重复消息（去重逻辑）
-    // 如果存在相同 senderId、receiverId、content 和相近时间的消息，可能是重复
     const existingIndex = privateMessages.value[key].findIndex(m => {
-      if (typeof m.id === 'string' && m.id.startsWith('temp-')) {
-        // 临时消息，检查是否匹配服务器返回的消息
-        return m.senderId === msg.senderId &&
-               m.receiverId === msg.receiverId &&
-               m.content === msg.content &&
-               Math.abs(new Date(m.createdAt) - new Date(msg.createdAt)) < 5000 // 5秒内
-      }
-      // 检查是否是完全相同的消息（通过ID）
-      return m.id === msg.id
+      if (m.id != null && msg.id != null && m.id === msg.id) return true
+
+      const isTemporary = typeof m.id === 'string' && m.id.startsWith('temp-')
+      if (!isTemporary) return false
+
+      const sameParticipants = String(m.senderId) === String(msg.senderId) &&
+        String(m.receiverId) === String(msg.receiverId)
+      const sameContent = m.content === msg.content && m.type === msg.type
+      const localTime = Date.parse(m.createdAt)
+      const serverTime = Date.parse(msg.createdAt)
+      const closeInTime = Number.isNaN(localTime) || Number.isNaN(serverTime)
+        ? true
+        : Math.abs(localTime - serverTime) < 30_000
+
+      return sameParticipants && sameContent && closeInTime
     })
 
     if (existingIndex !== -1) {
       // 替换临时消息为真实消息
       privateMessages.value[key][existingIndex] = msg
     } else {
-      // 新消息
-      privateMessages.value[key].push(msg)
+      // 检查是否已存在相同的真实消息（防止重复添加）
+      const isDuplicate = msg.id && privateMessages.value[key].some(m => m.id === msg.id)
+      if (!isDuplicate) {
+        privateMessages.value[key].push(msg)
+      }
     }
 
-    if (msg.senderId !== auth.user?.id) {
+    // 只有收到别人的新消息才增加未读计数
+    if (msg.senderId !== auth.user?.id && existingIndex === -1) {
       const unreadKey = `private_${key}`
       unreadCounts.value[unreadKey] = (unreadCounts.value[unreadKey] || 0) + 1
     }

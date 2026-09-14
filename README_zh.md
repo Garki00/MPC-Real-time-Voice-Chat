@@ -93,6 +93,16 @@ docker-compose up -d
 
 上传的文件（如用户头像）存储在宿主机的 `./data/uploads` 目录，并映射到后端容器的 `/app/uploads` 目录。即使容器重启或删除，文件也会持久保存在宿主机上。
 
+#### 时区配置
+
+后端容器默认使用 `Asia/Shanghai` 时区，确保消息时间戳与中国时区一致。如需修改时区，可在 `docker-compose.yml` 中修改：
+
+```yaml
+backend:
+  environment:
+    - TZ=Asia/Shanghai  # 修改为您需要的时区，如 UTC, America/New_York 等
+```
+
 #### 停止服务
 
 ```bash

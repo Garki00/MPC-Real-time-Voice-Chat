@@ -193,21 +193,7 @@ async function openChat(friend) {
 
 function sendMsg(content) {
   if (!activeFriend.value) return
-
-  // 乐观更新：立即显示消息
-  const tempId = `temp-${Date.now()}`
-  const optimisticMsg = {
-    id: tempId,
-    senderId: auth.user.id,
-    receiverId: activeFriend.value.id,
-    content,
-    type: 'TEXT',
-    createdAt: new Date().toISOString(),
-    senderName: auth.user?.username,
-    senderAvatar: auth.user?.avatar
-  }
-
-  chatStore.pushPrivate(optimisticMsg)
+  // 直接发送，通过WebSocket回显接收
   ws.sendPrivate(activeFriend.value.id, content)
 }
 
